@@ -1,8 +1,15 @@
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export const LandingPage = () => {
+    const { user, loading } = useAuth();
+
+    if (!loading && user) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
     return (
         <div className="flex flex-col items-center text-center space-y-8 py-20">
 
