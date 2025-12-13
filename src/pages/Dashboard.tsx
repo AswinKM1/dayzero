@@ -6,9 +6,11 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { db } from "../lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 export const Dashboard = () => {
-    const { userData, loading: authLoading } = useAuth();
+    const { userData, loading: authLoading, user } = useAuth();
     const navigate = useNavigate();
 
     // Protect: If loaded but no data, go to onboarding
@@ -18,16 +20,27 @@ export const Dashboard = () => {
         }
     }, [authLoading, userData, navigate]);
 
+    // Load persisted session on mount
+    useEffect(() => {
+        if (userData?.activeSession) {
+            console.log("Restoring active session from Firestore...");
+            // Force load the session derived from Firestore
+            // We strip the date check to ensure it always loads for debugging
+            setTasks(userData.activeSession.tasks);
+        }
+    }, [userData]);
+
     const [loading, setLoading] = useState(false);
     // Use 'any' for now to avoid rapid type import issues, or import Task type if we exported it
     const [tasks, setTasks] = useState<any[]>([]);
 
     const handleGenerate = async () => {
-        if (!userData) return;
+        if (!userData || !user) return;
         setLoading(true);
 
         const requestData = {
-            userGoal: userData.goal,
+            // Phase 2.3b TODO: Use 'goals' array instead of singular 'goal'
+            userGoal: userData.goals?.[0]?.title || userData.goal,
             energyLevel: "High", // In future, use the EnergySelector state
             currentDay: 1 // In future, calculate day difference from createdAt
         };
@@ -48,12 +61,33 @@ export const Dashboard = () => {
             const data = await response.json();
             console.log("Protocol Generated:", data);
 
-            if (data.tasks) setTasks(data.tasks);
+            if (data.tasks) {
+                const newTasks = data.tasks.map((t: any) => ({ ...t, completed: false }));
+                setTasks(newTasks);
+
+                // PERSIST: Save to Firestore immediately
+                const today = new Date().toISOString().split('T')[0];
+                const cleanTasks = newTasks.map((t: any) => ({
+                    time: t.time,
+                    task: t.task,
+                    type: t.type,
+                    completed: false
+                }));
+
+                await setDoc(doc(db, "users", user.uid), {
+                    activeSession: {
+                        date: today,
+                        tasks: cleanTasks,
+                        energyLevel: "High",
+                        completed: false
+                    }
+                }, { merge: true });
+            }
 
         } catch (error) {
             console.error("Protocol Failure:", error);
 
-            // Only fallback to mock if it's explicitly desired (e.g. dev mode), 
+            // Only fallback to mock if it's explicitly desired (e.g. dev mode),
             // but for debugging deployment we want to crash/alert.
             // setMockData() // Commented out to force debugging
 
@@ -67,10 +101,23 @@ export const Dashboard = () => {
         setLoading(false);
     };
 
-    const handleTaskComplete = (index: number) => {
+    const handleTaskComplete = async (index: number) => {
+        if (!user || !userData) return;
         const newTasks = [...tasks];
         newTasks[index].completed = !newTasks[index].completed;
         setTasks(newTasks);
+
+        // PERSIST: Update Firestore immediately
+        // We use the current tasks state but with the one update applied
+        // To be safe, we construct the object to match ActiveSession type
+        if (userData.activeSession) {
+            await setDoc(doc(db, "users", user.uid), {
+                activeSession: {
+                    ...userData.activeSession,
+                    tasks: newTasks
+                }
+            }, { merge: true });
+        }
     };
 
     const handleEnergySelect = (level: string) => {
@@ -101,6 +148,17 @@ export const Dashboard = () => {
                         onTaskComplete={handleTaskComplete}
                     />
                 </div>
+            </div>
+
+            {/* DEBUG PANEL - REMOVE AFTER FIXING */}
+            <div className="mt-8 p-4 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-mono text-zinc-400 break-all">
+                <p className="text-white font-bold mb-2">DEBUG STATE V2.4</p>
+                <p>User ID: {user?.uid}</p>
+                <p>Has UserData: {userData ? "YES" : "NO"}</p>
+                <p>Has ActiveSession: {userData?.activeSession ? "YES" : "NO"}</p>
+                <p>Goals: {userData?.goals?.length || 0}</p>
+                <p>Session Date: {userData?.activeSession?.date || "N/A"}</p>
+                <p>Task Count: {userData?.activeSession?.tasks?.length || 0}</p>
             </div>
         </div>
     );

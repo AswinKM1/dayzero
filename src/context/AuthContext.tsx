@@ -6,16 +6,9 @@ import {
     signOut,
     onAuthStateChanged
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-
-export interface UserData {
-    goal: string;
-    timeline: string;
-    dailyBandwidth: number;
-    proficiency: string;
-    onboardingCompleted: boolean;
-}
+import type { UserData, Goal } from "../types";
 
 interface AuthContextType {
     user: User | null;
@@ -23,6 +16,9 @@ interface AuthContextType {
     loading: boolean;
     signInWithGoogle: () => Promise<void>;
     logout: () => Promise<void>;
+    addGoal: (goal: Goal) => Promise<void>;
+    updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
+    deleteGoal: (id: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,27 +29,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser);
             if (currentUser) {
-                try {
-                    const docRef = doc(db, "users", currentUser.uid);
-                    const docSnap = await getDoc(docRef);
+                // Real-time listener for User Data
+                const docRef = doc(db, "users", currentUser.uid);
+                const unsubscribeSnapshot = onSnapshot(docRef, async (docSnap) => {
                     if (docSnap.exists()) {
-                        setUserData(docSnap.data() as UserData);
+                        let data = docSnap.data() as UserData;
+
+                        // --- LAZY MIGRATION START ---
+                        if (!data.goals && data.goal) {
+                            console.log("Migrating Legacy User...");
+                            const newGoalObject = {
+                                id: crypto.randomUUID(),
+                                title: data.goal,
+                                priority: "High" as const,
+                                status: "Active" as const,
+                                createdAt: new Date().toISOString(),
+                                deadline: data.timeline
+                            };
+                            // Write back immediately
+                            await setDoc(docRef, { goals: [newGoalObject] }, { merge: true });
+                            // No need to manually update 'data', snapshot will fire again!
+                            return;
+                        }
+                        // --- LAZY MIGRATION END ---
+
+                        setUserData(data);
                     } else {
                         setUserData(null);
                     }
-                } catch (err) {
-                    console.error("Error fetching user data:", err);
-                    setUserData(null);
-                }
+                }, (error) => {
+                    console.error("Error listening to user data:", error);
+                });
+
+                return () => {
+                    unsubscribeSnapshot();
+                };
             } else {
                 setUserData(null);
             }
             setLoading(false);
         });
-        return () => unsubscribe();
+        return () => unsubscribeAuth();
     }, []);
 
     const signInWithGoogle = async () => {
@@ -75,8 +94,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const addGoal = async (goal: Goal) => {
+        if (!user || !userData) return;
+        const newGoals = [...(userData.goals || []), goal];
+        const updatedUserData = { ...userData, goals: newGoals };
+        setUserData(updatedUserData);
+        await setDoc(doc(db, "users", user.uid), { goals: newGoals }, { merge: true });
+    };
+
+    const updateGoal = async (id: string, updates: Partial<Goal>) => {
+        if (!user || !userData) return;
+        const newGoals = (userData.goals || []).map(g => g.id === id ? { ...g, ...updates } : g);
+        const updatedUserData = { ...userData, goals: newGoals };
+        setUserData(updatedUserData);
+        await setDoc(doc(db, "users", user.uid), { goals: newGoals }, { merge: true });
+    };
+
+    const deleteGoal = async (id: string) => {
+        if (!user || !userData) return;
+        if ((userData.goals || []).length <= 1) {
+            alert("You must have at least one active mission.");
+            return;
+        }
+        const newGoals = (userData.goals || []).filter(g => g.id !== id);
+        const updatedUserData = { ...userData, goals: newGoals };
+        setUserData(updatedUserData);
+        await setDoc(doc(db, "users", user.uid), { goals: newGoals }, { merge: true });
+    };
+
     return (
-        <AuthContext.Provider value={{ user, userData, loading, signInWithGoogle, logout }}>
+        <AuthContext.Provider value={{
+            user,
+            userData,
+            loading,
+            signInWithGoogle,
+            logout,
+            addGoal,
+            updateGoal,
+            deleteGoal
+        }}>
             {children}
         </AuthContext.Provider>
     );
