@@ -89,7 +89,8 @@ export const Dashboard = () => {
                     time: t.time,
                     task: t.task,
                     type: t.type,
-                    completed: false
+                    completed: false,
+                    related_goal_name: t.related_goal_name // Preserve AI context
                 }));
 
                 await setDoc(doc(db, "users", user.uid), {

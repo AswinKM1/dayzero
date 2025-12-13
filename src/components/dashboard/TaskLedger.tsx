@@ -7,6 +7,7 @@ export interface Task {
     task: string;
     type: "work" | "break" | "boss_fight";
     completed?: boolean;
+    related_goal_name?: string;
 }
 
 interface TaskLedgerProps {
@@ -104,7 +105,7 @@ export const TaskLedger = ({ onGenerate, loading = false, tasks = [], onTaskComp
                             </button>
 
                             <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
                                     <span className="text-xs font-mono text-zinc-500 tracking-wider bg-black/20 px-2 py-0.5 rounded">
                                         {task.time}
                                     </span>
@@ -112,6 +113,11 @@ export const TaskLedger = ({ onGenerate, loading = false, tasks = [], onTaskComp
                                         <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-red-400 tracking-widest bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
                                             <AlertTriangle className="w-3 h-3" />
                                             Boss Fight
+                                        </span>
+                                    )}
+                                    {task.related_goal_name && task.related_goal_name !== 'General' && (
+                                        <span className="text-[10px] font-medium text-emerald-400/80 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/10 tracking-wide truncate max-w-[120px]">
+                                            {task.related_goal_name}
                                         </span>
                                     )}
                                 </div>

@@ -15,6 +15,7 @@ export interface ActiveSession {
         task: string;
         type: "work" | "break" | "boss_fight";
         completed: boolean;
+        related_goal_name?: string;
     }[];
     energyLevel: "High" | "Medium" | "Low";
     completed: boolean;

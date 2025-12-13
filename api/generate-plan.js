@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     {
       "theme": "String (e.g., 'Operation Deep Dive', 'Tactical Rest')",
       "tasks": [
-        { "time": "09:00", "task": "Actionable task name", "type": "work" | "break" | "boss_fight" },
+        { "time": "09:00", "task": "Actionable task name", "type": "work" | "break" | "boss_fight", "related_goal_name": "Name of the mission this serves (or 'General')" },
         ...
       ]
     }`;
