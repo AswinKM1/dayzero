@@ -29,12 +29,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let unsubscribeSnapshot: () => void;
+
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser);
             if (currentUser) {
                 // Real-time listener for User Data
                 const docRef = doc(db, "users", currentUser.uid);
-                const unsubscribeSnapshot = onSnapshot(docRef, async (docSnap) => {
+                unsubscribeSnapshot = onSnapshot(docRef, async (docSnap) => {
                     if (docSnap.exists()) {
                         let data = docSnap.data() as UserData;
 
@@ -60,19 +62,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     } else {
                         setUserData(null);
                     }
+                    // IMPORTANT: We have data (or decided it's null), so stop loading
+                    setLoading(false);
                 }, (error) => {
                     console.error("Error listening to user data:", error);
+                    setLoading(false); // Stop loading even on error
                 });
-
-                return () => {
-                    unsubscribeSnapshot();
-                };
             } else {
                 setUserData(null);
+                setLoading(false);
             }
-            setLoading(false);
         });
-        return () => unsubscribeAuth();
+
+        return () => {
+            unsubscribeAuth();
+            if (unsubscribeSnapshot) unsubscribeSnapshot();
+        };
     }, []);
 
     const signInWithGoogle = async () => {
