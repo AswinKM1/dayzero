@@ -16,8 +16,8 @@ export default async function handler(req, res) {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
         // CONFIRMED via Diagnostic: User has access to 'models/gemini-2.5-flash'.
-        // We will use 'gemini-2.0-flash' as a safe standard, but if that fails we will try 2.5 explicitly.
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        // "gemini-2.0-flash" failed with quota (Limit 0), likely paid only. "2.5" is in the list, trying that.
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const systemInstruction = `You are an elite productivity coach for the "DayZero" app. 
     Your goal is to generate a structured daily schedule in JSON format.
