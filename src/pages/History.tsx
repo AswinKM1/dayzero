@@ -81,6 +81,12 @@ export default function History() {
                                 <p className="text-zinc-400 text-sm">
                                     {entry.tasks.length} Missions Assigned • {entry.energyLevel} Energy
                                 </p>
+                                {entry.aiAnalysis && (
+                                    <div className="mt-3 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 text-sm font-mono leading-relaxed max-w-xl">
+                                        <span className="text-indigo-400 font-bold mr-2 uppercase text-xs tracking-wider">Commander:</span>
+                                        {entry.aiAnalysis}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex items-center gap-6">

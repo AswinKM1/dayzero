@@ -136,11 +136,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const completedTasks = session.tasks.filter(t => t.completed).length;
         const score = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
+        let analysis = "";
+        try {
+            console.log("Requesting Mission Analysis...");
+            const response = await fetch('/api/analyze-day', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tasks: session.tasks,
+                    score,
+                    energyLevel: session.energyLevel
+                })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                analysis = data.analysis;
+            }
+        } catch (e) {
+            console.error("Analysis Failed:", e);
+        }
+
         const historyEntry: HistoryEntry = {
             ...session,
             id: session.date,
             score,
-            completedAt: new Date().toISOString()
+            completedAt: new Date().toISOString(),
+            aiAnalysis: analysis
         };
 
         // 1. Archive to History Subcollection
