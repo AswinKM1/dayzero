@@ -6,9 +6,9 @@ import {
     signOut,
     onAuthStateChanged
 } from "firebase/auth";
-import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, onSnapshot, deleteField } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-import type { UserData, Goal } from "../types";
+import type { UserData, Goal, HistoryEntry } from "../types";
 
 interface AuthContextType {
     user: User | null;
@@ -19,6 +19,7 @@ interface AuthContextType {
     addGoal: (goal: Goal) => Promise<void>;
     updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
     deleteGoal: (id: string) => Promise<void>;
+    completeDay: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -127,6 +128,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await setDoc(doc(db, "users", user.uid), { goals: newGoals }, { merge: true });
     };
 
+    const completeDay = async () => {
+        if (!user || !userData || !userData.activeSession) return;
+
+        const session = userData.activeSession;
+        const totalTasks = session.tasks.length;
+        const completedTasks = session.tasks.filter(t => t.completed).length;
+        const score = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+        const historyEntry: HistoryEntry = {
+            ...session,
+            id: session.date,
+            score,
+            completedAt: new Date().toISOString()
+        };
+
+        // 1. Archive to History Subcollection
+        await setDoc(doc(db, "users", user.uid, "history", session.date), historyEntry);
+
+        // 2. Clear Active Session (Reset for tomorrow)
+        await setDoc(doc(db, "users", user.uid), {
+            activeSession: deleteField()
+        }, { merge: true });
+
+        // 3. Update Local State (Optional, snapshot will likely catch it)
+        const updatedUserData = { ...userData };
+        delete updatedUserData.activeSession;
+        setUserData(updatedUserData);
+    };
+
     return (
         <AuthContext.Provider value={{
             user,
@@ -136,7 +166,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             logout,
             addGoal,
             updateGoal,
-            deleteGoal
+            deleteGoal,
+            completeDay
         }}>
             {children}
         </AuthContext.Provider>

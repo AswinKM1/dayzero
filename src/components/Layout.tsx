@@ -11,7 +11,7 @@ export default function Layout({ children }: LayoutProps) {
     const location = useLocation();
 
     const tabs = [
-        { name: "Command", path: "/", icon: Home },
+        { name: "Command", path: "/dashboard", icon: Home },
         { name: "Missions", path: "/goals", icon: Target },
         { name: "Log", path: "/history", icon: Calendar },
     ];

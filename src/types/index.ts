@@ -22,6 +22,12 @@ export interface ActiveSession {
     generatedGoalCount?: number;
 }
 
+export interface HistoryEntry extends ActiveSession {
+    id: string; // usually YYYY-MM-DD
+    score: number; // 0-100
+    completedAt: string; // ISO Timestamp
+}
+
 export interface UserData {
     // New Fields
     goals: Goal[];

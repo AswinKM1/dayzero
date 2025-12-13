@@ -8,9 +8,10 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { db } from "../lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
+import { CheckCircle } from "lucide-react";
 
 export const Dashboard = () => {
-    const { userData, loading: authLoading, user } = useAuth();
+    const { userData, loading: authLoading, user, completeDay } = useAuth();
     const navigate = useNavigate();
 
     // Protect: If loaded but no data, go to onboarding
@@ -182,6 +183,28 @@ export const Dashboard = () => {
                         tasks={tasks}
                         onTaskComplete={handleTaskComplete}
                     />
+
+                    {hasActiveSession && (
+                        <div className="mt-8 flex justify-center pb-12">
+                            <button
+                                onClick={async () => {
+                                    if (window.confirm("End today's mission? This will archive your progress.")) {
+                                        try {
+                                            await completeDay();
+                                            setTasks([]); // Clear local state immediately
+                                        } catch (e) {
+                                            console.error(e);
+                                            alert("Failed to archive mission.");
+                                        }
+                                    }
+                                }}
+                                className="group flex items-center gap-3 px-8 py-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 rounded-full transition-all duration-300"
+                            >
+                                <CheckCircle className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                                <span className="text-emerald-400 font-medium tracking-widest uppercase text-sm">Mission Complete</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
