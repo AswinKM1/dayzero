@@ -14,7 +14,8 @@ export default async function handler(req, res) {
 
     try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // Switching to 'gemini-pro' as 1.5-flash is restricted or rolling out
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
         const systemInstruction = `You are an elite productivity coach for the "DayZero" app. 
     Your goal is to generate a structured daily schedule in JSON format.
