@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Goal } from "../types";
-import { Plus, X, Save, Target, Trash2, Edit2, AlertCircle } from "lucide-react";
+import type { Goal } from "../types";
+import { Plus, X, Save, Target, Trash2, Edit2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 
