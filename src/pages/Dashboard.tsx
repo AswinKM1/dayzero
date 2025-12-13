@@ -39,7 +39,11 @@ export const Dashboard = () => {
                 body: JSON.stringify(requestData)
             });
 
-            if (!response.ok) throw new Error("API Failed");
+            if (!response.ok) {
+                const errorText = await response.text();
+                alert(`System Error: ${response.status} - ${errorText}`);
+                throw new Error(`API Error: ${response.status}`);
+            }
 
             const data = await response.json();
             console.log("Protocol Generated:", data);
@@ -47,19 +51,16 @@ export const Dashboard = () => {
 
         } catch (error) {
             console.error("Protocol Failure:", error);
-            // Simulate Mock Data for "Mock Mode"
-            console.warn("Switching to Simulation Mode...");
-            setTimeout(() => {
-                const simulatedTasks = [
-                    { time: "09:00", task: "Deep Work: Architecture Review", type: "work" },
-                    { time: "11:30", task: "Refuel & Hydrate", type: "break" },
-                    { time: "14:00", task: "BOSS FIGHT: Client Negotiation", type: "boss_fight" },
-                    { time: "16:00", task: "Code Cleanup", type: "work" },
-                ];
-                setTasks(simulatedTasks);
-                setLoading(false);
-            }, 2000);
-            return; // Exit early to avoid finally block overwriting state if we want custom delay
+
+            // Only fallback to mock if it's explicitly desired (e.g. dev mode), 
+            // but for debugging deployment we want to crash/alert.
+            // setMockData() // Commented out to force debugging
+
+            alert("Protocol Initialization Failed. Check Console for details.");
+            setLoading(false);
+            return;
+
+
         }
 
         setLoading(false);

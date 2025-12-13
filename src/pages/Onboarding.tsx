@@ -54,11 +54,11 @@ export const Onboarding = () => {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center p-6 relative overflow-hidden">
+        <div className="min-h-screen w-full flex items-center justify-center p-4 overflow-x-hidden relative">
             {/* Decorative Background */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-            <div className="w-full max-w-md glass-panel p-8 md:p-12 rounded-3xl relative z-10">
+            <div className="w-full w-[90%] max-w-sm mx-auto relative glass-panel rounded-3xl p-6 md:p-8 z-10 overflow-hidden">
                 <div className="mb-8 flex items-center justify-between">
                     <h1 className="text-xl font-light tracking-widest uppercase text-zinc-400">System Calibration</h1>
                     <span className="text-sm font-mono text-indigo-400">Step {step} / 4</span>
