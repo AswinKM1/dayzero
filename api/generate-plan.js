@@ -6,7 +6,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
-    const { userGoal, energyLevel, currentDay } = req.body;
+    const { userGoals, energyLevel, currentDay, availableTime } = req.body;
 
     if (!process.env.GEMINI_API_KEY) {
         return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
@@ -14,29 +14,37 @@ export default async function handler(req, res) {
 
     try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-        // CONFIRMED via Diagnostic: User has access to 'models/gemini-2.5-flash'.
-        // "gemini-2.0-flash" failed with quota (Limit 0), likely paid only. "2.5" is in the list, trying that.
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        // Format goals for prompt
+        const goalsList = userGoals && userGoals.length > 0
+            ? userGoals.map(g => `- [${g.priority} PRIORITY] ${g.title} (${g.category})`).join('\n')
+            : "- No specific goals defined.";
 
         const systemInstruction = `You are an elite productivity coach for the "DayZero" app. 
     Your goal is to generate a structured daily schedule in JSON format.
     
-    Inputs:
-    - User Goal: "${userGoal}"
-    - Energy Level: "${energyLevel}" (Low, Medium, High)
+    CONTEXT:
+    - Active Missions (Use these to generate tasks):\n${goalsList}
+    - User Energy Level: "${energyLevel}" (Low=Recovery, High=Boss Mode)
+    - Available Time: ${availableTime} hours available today.
     - Current Day: ${currentDay}
 
-    Rules:
-    - If Energy is Low: Focus on recovery, light learning, and easy wins.
-    - If Energy is High: Schedule "Boss Fights" (hard tasks) and deep work blocks.
-    - Output strictly valid JSON. No markdown fencing.
+    RULES:
+    1. BALANCE: Create tasks that advance the High Priority missions first.
+    2. TIMEBOXING: Ensuring the total duration of work tasks does not exceed ${availableTime} hours.
+    3. ADAPTABILITY: 
+       - If Energy is Low: Focus on easy wins, research, and recovery.
+       - If Energy is High: Schedule "Boss Fights" (hard tasks) and deep work blocks.
+    4. VARIETY: Mix "Deep Work" with "Quick Wins".
+    
+    Output strictly valid JSON. No markdown fencing.
     
     JSON Structure:
     {
-      "theme": "String (e.g., 'Deep Dive')",
+      "theme": "String (e.g., 'Operation Deep Dive', 'Tactical Rest')",
       "tasks": [
-        { "time": "09:00", "task": "String", "type": "work" | "break" | "boss_fight" },
+        { "time": "09:00", "task": "Actionable task name", "type": "work" | "break" | "boss_fight" },
         ...
       ]
     }`;

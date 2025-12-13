@@ -47,12 +47,17 @@ export const Dashboard = () => {
         if (!userData || !user) return;
         setLoading(true);
 
+        const goalsPayload = userData.goals?.map(g => ({
+            title: g.title,
+            priority: g.priority,
+            category: g.category
+        })) || (userData.goal ? [{ title: userData.goal, priority: "High", category: "Core" }] : []);
+
         const requestData = {
-            // Phase 2.3b TODO: Use 'goals' array instead of singular 'goal'
-            userGoal: userData.goals?.[0]?.title || userData.goal,
+            userGoals: goalsPayload,
             energyLevel: energyLevel,
-            availableTime: availableTime, // Send this to API
-            currentDay: 1 // In future, calculate day difference from createdAt
+            availableTime: availableTime,
+            currentDay: 1
         };
 
         try {
