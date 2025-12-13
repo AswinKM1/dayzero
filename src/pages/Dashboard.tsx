@@ -43,7 +43,7 @@ export const Dashboard = () => {
     // (In a perfect world we check date, but we rely on the useEffect logic to load only valid sessions)
     const hasActiveSession = tasks.length > 0;
 
-    const handleGenerate = async () => {
+    const handleGenerate = async (isAutoRefresh = false) => {
         if (!userData || !user) return;
         setLoading(true);
 
@@ -68,8 +68,12 @@ export const Dashboard = () => {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                alert(`System Error: ${response.status} - ${errorText}`);
+                // If auto-refresh fails, silent fail better than alerting?
+                // For now, let's keep it visible so user knows why it didn't update.
+                if (!isAutoRefresh) {
+                    const errorText = await response.text();
+                    alert(`System Error: ${response.status} - ${errorText}`);
+                }
                 throw new Error(`API Error: ${response.status}`);
             }
 
@@ -93,20 +97,37 @@ export const Dashboard = () => {
                         date: today,
                         tasks: cleanTasks,
                         energyLevel: energyLevel,
-                        completed: false
+                        completed: false,
+                        generatedGoalCount: goalsPayload.length // Save count to detect changes later
                     }
                 }, { merge: true });
             }
 
         } catch (error) {
             console.error("Protocol Failure:", error);
-            alert("Protocol Initialization Failed. Check Console for details.");
+            if (!isAutoRefresh) {
+                alert("Protocol Initialization Failed. Check Console for details.");
+            }
             setLoading(false);
             return;
         }
 
         setLoading(false);
     };
+
+    // Auto-Regenerate on Mount if Goal Count has changed
+    useEffect(() => {
+        if (userData?.activeSession && userData?.goals) {
+            const lastCount = userData.activeSession.generatedGoalCount || 0;
+            const currentCount = userData.goals.length;
+
+            if (currentCount > lastCount && !loading) {
+                console.log("New Mission Detected: Auto-Optimizing Protocol...");
+                // Trigger update
+                handleGenerate(true);
+            }
+        }
+    }, [userData]); // Check whenever userData updates (which happens on nav back from goals)
 
     const handleTaskComplete = async (index: number) => {
         if (!user || !userData) return;

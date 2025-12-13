@@ -18,6 +18,7 @@ export interface ActiveSession {
     }[];
     energyLevel: "High" | "Medium" | "Low";
     completed: boolean;
+    generatedGoalCount?: number;
 }
 
 export interface UserData {
