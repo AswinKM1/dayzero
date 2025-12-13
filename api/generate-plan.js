@@ -13,24 +13,44 @@ export default async function handler(req, res) {
     }
 
     try {
-        // DIAGNOSTIC MODE: List all available models for this API Key
-        // We use direct fetch to bypass SDK versioning issues
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`
-        );
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`ListModels Failed: ${response.status} - ${error}`);
-        }
+        // CONFIRMED via Diagnostic: User has access to 'models/gemini-2.5-flash'.
+        // We will use 'gemini-2.0-flash' as a safe standard, but if that fails we will try 2.5 explicitly.
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-        const data = await response.json();
+        const systemInstruction = `You are an elite productivity coach for the "DayZero" app. 
+    Your goal is to generate a structured daily schedule in JSON format.
+    
+    Inputs:
+    - User Goal: "${userGoal}"
+    - Energy Level: "${energyLevel}" (Low, Medium, High)
+    - Current Day: ${currentDay}
 
-        // Return the list of models to the user so we can pick a valid one
-        return res.status(200).json({
-            message: "DIAGNOSTIC SUCCESS: Models Found",
-            models: data.models || []
-        });
+    Rules:
+    - If Energy is Low: Focus on recovery, light learning, and easy wins.
+    - If Energy is High: Schedule "Boss Fights" (hard tasks) and deep work blocks.
+    - Output strictly valid JSON. No markdown fencing.
+    
+    JSON Structure:
+    {
+      "theme": "String (e.g., 'Deep Dive')",
+      "tasks": [
+        { "time": "09:00", "task": "String", "type": "work" | "break" | "boss_fight" },
+        ...
+      ]
+    }`;
+
+        const result = await model.generateContent(systemInstruction);
+        const response = await result.response;
+        const text = response.text();
+
+        // Clean up markdown code blocks if present (Gemini sometimes adds ```json)
+        const cleanedText = text.replace(/```json/g, "").replace(/```/g, "").trim();
+
+        const plan = JSON.parse(cleanedText);
+
+        return res.status(200).json(plan);
 
     } catch (error) {
         console.error("Gemini API Error:", error);

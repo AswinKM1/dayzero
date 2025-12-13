@@ -48,9 +48,6 @@ export const Dashboard = () => {
             const data = await response.json();
             console.log("Protocol Generated:", data);
 
-            // DIAGNOSTIC ALERT: Show us the data!
-            alert("DIAGNOSTIC DATA:\n" + JSON.stringify(data, null, 2));
-
             if (data.tasks) setTasks(data.tasks);
 
         } catch (error) {
