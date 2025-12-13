@@ -7,6 +7,8 @@ export const Header = () => {
     const streak = 0;
     const { logout } = useAuth();
 
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
     return (
         <div className="w-full flex items-end justify-between py-6 border-b border-white/5 mb-8">
             <div>
@@ -14,6 +16,7 @@ export const Header = () => {
                 <h1 className="text-4xl md:text-5xl font-thin text-white tracking-tight">
                     Day <span className="font-normal">{String(day).padStart(2, '0')}</span>
                 </h1>
+                <p className="text-zinc-500 font-mono text-sm mt-2">{today}</p>
             </div>
 
             <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/10">

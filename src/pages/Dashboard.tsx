@@ -34,6 +34,15 @@ export const Dashboard = () => {
     // Use 'any' for now to avoid rapid type import issues, or import Task type if we exported it
     const [tasks, setTasks] = useState<any[]>([]);
 
+    // New State for Time Slider
+    const [availableTime, setAvailableTime] = useState(4);
+    const [energyLevel, setEnergyLevel] = useState("medium");
+
+    // Computed property: Do we have an active session for TODAY?
+    // We check if 'tasks' has length > 0, which implies a session is active.
+    // (In a perfect world we check date, but we rely on the useEffect logic to load only valid sessions)
+    const hasActiveSession = tasks.length > 0;
+
     const handleGenerate = async () => {
         if (!userData || !user) return;
         setLoading(true);
@@ -41,7 +50,8 @@ export const Dashboard = () => {
         const requestData = {
             // Phase 2.3b TODO: Use 'goals' array instead of singular 'goal'
             userGoal: userData.goals?.[0]?.title || userData.goal,
-            energyLevel: "High", // In future, use the EnergySelector state
+            energyLevel: energyLevel,
+            availableTime: availableTime, // Send this to API
             currentDay: 1 // In future, calculate day difference from createdAt
         };
 
@@ -59,7 +69,6 @@ export const Dashboard = () => {
             }
 
             const data = await response.json();
-            console.log("Protocol Generated:", data);
 
             if (data.tasks) {
                 const newTasks = data.tasks.map((t: any) => ({ ...t, completed: false }));
@@ -78,7 +87,7 @@ export const Dashboard = () => {
                     activeSession: {
                         date: today,
                         tasks: cleanTasks,
-                        energyLevel: "High",
+                        energyLevel: energyLevel,
                         completed: false
                     }
                 }, { merge: true });
@@ -86,16 +95,9 @@ export const Dashboard = () => {
 
         } catch (error) {
             console.error("Protocol Failure:", error);
-
-            // Only fallback to mock if it's explicitly desired (e.g. dev mode),
-            // but for debugging deployment we want to crash/alert.
-            // setMockData() // Commented out to force debugging
-
             alert("Protocol Initialization Failed. Check Console for details.");
             setLoading(false);
             return;
-
-
         }
 
         setLoading(false);
@@ -108,8 +110,6 @@ export const Dashboard = () => {
         setTasks(newTasks);
 
         // PERSIST: Update Firestore immediately
-        // We use the current tasks state but with the one update applied
-        // To be safe, we construct the object to match ActiveSession type
         if (userData.activeSession) {
             await setDoc(doc(db, "users", user.uid), {
                 activeSession: {
@@ -121,7 +121,7 @@ export const Dashboard = () => {
     };
 
     const handleEnergySelect = (level: string) => {
-        console.log("Energy selected:", level);
+        setEnergyLevel(level);
     };
 
     return (
@@ -129,18 +129,26 @@ export const Dashboard = () => {
             <Header />
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+
                 {/* Left Column - Logic / Inputs (4 cols) */}
-                <div className="md:col-span-4 space-y-6">
-                    <EnergySelector onSelect={handleEnergySelect} />
+                {/* HIDE this column if we already have an active session to save space */}
+                {!hasActiveSession && (
+                    <div className="md:col-span-4 space-y-6">
+                        <EnergySelector
+                            onSelect={handleEnergySelect}
+                            onTimeSelect={setAvailableTime}
+                            initialHours={availableTime}
+                        />
 
-                    {/* Placeholder for Goals or other widgets */}
-                    <div className="glass-panel p-6 rounded-3xl min-h-[200px] flex items-center justify-center text-zinc-500 border-dashed">
-                        <span className="text-xs uppercase tracking-widest">Active Goals Widget</span>
+                        {/* Placeholder for Goals or other widgets */}
+                        <div className="glass-panel p-6 rounded-3xl min-h-[200px] flex items-center justify-center text-zinc-500 border-dashed">
+                            <span className="text-xs uppercase tracking-widest">Active Goals Widget</span>
+                        </div>
                     </div>
-                </div>
+                )}
 
-                {/* Right Column - Tasks (8 cols) */}
-                <div className="md:col-span-8">
+                {/* Right Column - Tasks (8 cols) - Expand to full width if logic is hidden */}
+                <div className={!hasActiveSession ? "md:col-span-8" : "md:col-span-12"}>
                     <TaskLedger
                         onGenerate={handleGenerate}
                         loading={loading}
@@ -150,16 +158,7 @@ export const Dashboard = () => {
                 </div>
             </div>
 
-            {/* DEBUG PANEL - REMOVE AFTER FIXING */}
-            <div className="mt-8 p-4 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-mono text-zinc-400 break-all">
-                <p className="text-white font-bold mb-2">DEBUG STATE V2.4</p>
-                <p>User ID: {user?.uid}</p>
-                <p>Has UserData: {userData ? "YES" : "NO"}</p>
-                <p>Has ActiveSession: {userData?.activeSession ? "YES" : "NO"}</p>
-                <p>Goals: {userData?.goals?.length || 0}</p>
-                <p>Session Date: {userData?.activeSession?.date || "N/A"}</p>
-                <p>Task Count: {userData?.activeSession?.tasks?.length || 0}</p>
-            </div>
+            {/* DEBUG PANEL REMOVED */}
         </div>
     );
 };
