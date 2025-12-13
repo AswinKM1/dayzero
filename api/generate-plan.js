@@ -14,8 +14,21 @@ export default async function handler(req, res) {
 
     try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        // Switching to 'gemini-pro' as 1.5-flash is restricted or rolling out
+        // DEBUGGING STEP: List available models to find the right name
+        /*
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const systemInstruction = ...
+        const result = await model.generateContent(systemInstruction);
+        */
+
+        // TEMPORARY: Just list models to see what we have access to
+        // Note: listModels is invalid on the client instance directly in some versions, 
+        // but let's try to just return a simple "Hello" with a safer model if possible,
+        // OR try to catch the specific error and return the list if we can.
+
+        // Actually, the most robust fix is to try a model that DEFINITELY exists.
+        // gemini-1.0-pro is the legacy name.
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
         const systemInstruction = `You are an elite productivity coach for the "DayZero" app. 
     Your goal is to generate a structured daily schedule in JSON format.
